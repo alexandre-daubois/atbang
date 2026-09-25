@@ -1,11 +1,11 @@
 #!/bin/sh
 # Builds a universal build/Atbang.app and zips it as build/Atbang-$VERSION.zip.
-# VERSION defaults to 0.1.0. SIGN_IDENTITY signs with that Developer ID certificate instead of an ad-hoc
+# VERSION defaults to 1.0.0. SIGN_IDENTITY signs with that Developer ID certificate instead of an ad-hoc
 # signature, and NOTARY_PROFILE, a profile saved with `xcrun notarytool store-credentials`, notarizes and staples.
 set -eu
 
 cd "$(dirname "$0")/.."
-VERSION=${VERSION:-0.1.0}
+VERSION=${VERSION:-1.0.0}
 swift build -c release --arch arm64 --arch x86_64
 bin=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 
