@@ -2,7 +2,7 @@
 
 Atbang is a free, open-source macOS menu bar app that sorts your unread GitHub notifications by priority with Claude AI. It reads the recent conversation of each pull request and issue, and the report of each security advisory. Each thread gets a priority and a one-line summary of who waits on whom, so you can clear your GitHub inbox without opening the threads one by one.
 
-<p align="center"><img src="demo.png" alt="Atbang, a macOS menu bar app triaging GitHub notifications with Claude" width="360"></p>
+<p align="center"><img src="demo.png" alt="Atbang, a macOS menu bar app triaging GitHub notifications with Claude" width="450"></p>
 
 ## Features
 
