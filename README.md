@@ -17,9 +17,9 @@ Atbang is a free, open-source macOS menu bar app that sorts your unread GitHub n
 
 ## How it prioritizes
 
-Atbang fetches the thread from GitHub and reads the description, the last 30 comments and the last 20 reviews with their inline comments. It computes some facts itself: the pull request state, who wrote last, whether someone requested your review, the CI status, merge conflicts, new commits since your review, and whether someone mentioned you since your last reply. Claude reads the conversation and these facts, then picks a priority.
+Atbang fetches the thread from GitHub and reads the description, the last 30 comments and the last 20 reviews with up to 10 inline comments each. It computes some facts itself: the pull request state, who wrote last, whether someone requested your review, the CI status, merge conflicts, new commits since your review, and whether someone mentioned you since your last reply. Claude reads the description, the 20 most recent entries of the conversation and these facts, then picks a priority.
 
-`!!!` means someone waits on you: a review requested from you, a question you haven't answered, feedback on your own pull request, or a security advisory assigned to you and still in triage. `!!` deserves a look but blocks nobody, like activity on your pull request, a review requested from one of your teams, or failing CI on your pull request. `!` keeps you informed about a thread you follow without taking part, a question for someone else, a merged pull request, or a thread where you spoke last.
+`!!!` means someone waits on you: a review requested from you directly, a question you haven't answered, feedback on your own pull request, or a security advisory assigned to you and still in triage. `!!` deserves a look but nobody waits on you, like activity on your pull request, a review requested from one of your teams, or failing CI on your pull request. `!` keeps you informed about a thread you follow without taking part, a question for someone else, a merged pull request, or a thread where you spoke last.
 
 ## Install
 
@@ -37,7 +37,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude auth login
 ```
 
-Atbang lands in your Applications folder and runs in the menu bar. It checks both tools when it starts and tells you what's missing. Without Homebrew, download `Atbang-<version>.zip` from the [releases](https://github.com/alexandre-daubois/atbang/releases) and move `Atbang.app` to your Applications folder.
+Atbang lands in your Applications folder and runs in the menu bar. It checks both tools when it starts and tells you what's missing. Without Homebrew, install the [GitHub CLI](https://cli.github.com), download `Atbang-<version>.zip` from the [releases](https://github.com/alexandre-daubois/atbang/releases) and move `Atbang.app` to your Applications folder.
 
 ## Update and uninstall
 
@@ -50,7 +50,7 @@ brew uninstall --cask --zap alexandre-daubois/tap/atbang
 
 ## Privacy and security
 
-Atbang carries a Developer ID signature and Apple notarizes each release. The app reads from GitHub and writes one thing, marking a thread as done when you ask. It takes the token of the GitHub CLI, keeps it in memory and sends it to `api.github.com` alone. `claude -p` runs without any tool, MCP server or settings. Atbang hands it the thread text as untrusted data, tells Claude to ignore any instruction inside, checks the answer against a strict JSON schema and displays it as plain text.
+Since version 1.0.2, Atbang carries a Developer ID signature and Apple notarizes each release. The app reads from GitHub and writes one thing, marking a thread as done when you ask. It takes the token of the GitHub CLI, keeps it in memory and sends it to `api.github.com` alone. `claude -p` runs without any tool, MCP server or settings. Atbang hands it the thread text as untrusted data, tells Claude to ignore any instruction inside, makes it answer through a strict JSON schema and displays the answer as plain text.
 
 ## License
 
