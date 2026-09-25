@@ -13,6 +13,7 @@ final class AppModel {
     private(set) var isRefreshing = false
     private(set) var lastRefresh: Date?
     private(set) var error: String?
+    private(set) var lastViewedID: String?
     /// Rows showing their longer explanation. Not persisted, and reset whenever the popover closes.
     private(set) var expandedIDs: Set<String> = []
     private(set) var requirements: [Requirement] = []
@@ -90,6 +91,7 @@ final class AppModel {
 
     func open(_ item: TriageItem) {
         guard item.htmlURL.scheme == "https", item.htmlURL.host() == "github.com" else { return }
+        lastViewedID = item.id
         NSWorkspace.shared.open(item.htmlURL)
     }
 

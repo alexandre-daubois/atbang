@@ -8,6 +8,7 @@ struct NotificationList: View {
 
     let model: AppModel
     @Binding var rowBottoms: [String: CGFloat]
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         if model.items.isEmpty {
@@ -25,7 +26,11 @@ struct NotificationList: View {
                                 NotificationRow(
                                     item: item,
                                     showsRepository: !model.groupsByRepository,
-                                    open: { model.open(item) },
+                                    isLastViewed: model.lastViewedID == item.id,
+                                    open: {
+                                        model.open(item)
+                                        dismiss()
+                                    },
                                     markAsDone: { Task { await model.markAsDone(item) } },
                                     isExpanded: model.expandedIDs.contains(item.id),
                                     showDetails: { Task { await model.showDetails(item) } }
@@ -123,6 +128,7 @@ private struct SectionHeader: View {
 struct NotificationRow: View {
     let item: TriageItem
     let showsRepository: Bool
+    let isLastViewed: Bool
     let open: () -> Void
     let markAsDone: () -> Void
     let isExpanded: Bool
@@ -229,6 +235,11 @@ struct NotificationRow: View {
                 Text("·")
             }
             Text(reason).lineLimit(1)
+            if isLastViewed {
+                Text("• Last viewed")
+                    .foregroundStyle(.tint)
+                    .lineLimit(1)
+            }
             if case let .failed(message) = item.status {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
