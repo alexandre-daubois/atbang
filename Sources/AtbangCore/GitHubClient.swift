@@ -1,7 +1,5 @@
 import Foundation
 
-/// Every request goes through `send`, which only lets GET calls, GraphQL queries (never mutations) and marking one
-/// notification thread as done reach api.github.com.
 public struct GitHubClient: Sendable {
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case notAllowed
@@ -59,18 +57,17 @@ public struct GitHubClient: Sendable {
     }
 
     public struct UnreadNotifications: Sendable, Equatable {
-        /// Nil when GitHub answered 304 Not Modified, which does not count against the rate limit.
         public let notifications: [GitHubNotification]?
         public let etag: String?
         public let pollInterval: Int?
     }
 
-    /// Pages are offsets into a list sorted by activity, so a thread updated between two requests shows up twice.
-    /// The ETag, unlike Last-Modified, also changes when a thread leaves the list after being read elsewhere.
     public func unreadNotifications(ifNoneMatch etag: String? = nil) async throws -> UnreadNotifications {
         var request = URLRequest(url: Self.api.appending(path: "notifications").appending(queryItems: [URLQueryItem(name: "per_page", value: "50")]))
+        // Unlike Last-Modified, the ETag also changes when a thread read elsewhere leaves the list.
         request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         let (notifications, response) = try await getAll(request, as: GitHubNotification.self)
+        // Pages are offsets into a list sorted by activity, so a thread updated between two requests shows up twice.
         var seen = Set<String>()
         return UnreadNotifications(
             notifications: response.statusCode == 304 ? nil : notifications.filter { seen.insert($0.id).inserted },

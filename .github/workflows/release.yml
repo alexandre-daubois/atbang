@@ -18,7 +18,7 @@ jobs:
       - name: Test
         run: swift test
 
-      # Releases are always notarized, so a missing secret stops the release instead of shipping an app Gatekeeper refuses.
+      # A missing secret stops the release instead of shipping an app Gatekeeper refuses.
       - name: Import the Developer ID certificate
         env:
           CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}

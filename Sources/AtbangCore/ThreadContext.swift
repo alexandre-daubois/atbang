@@ -1,6 +1,6 @@
 import Foundation
 
-/// Signals computed by the app from GitHub's API: Claude may rely on them.
+/// The prompt tells Claude these are reliable, so no text written by a third party belongs here.
 public struct Facts: Codable, Sendable, Equatable {
     public struct LastActivity: Codable, Sendable, Equatable {
         public let author: String
@@ -42,7 +42,6 @@ public struct Facts: Codable, Sendable, Equatable {
     }
 }
 
-/// Text written by third parties: only ever summarized, never obeyed.
 public struct UntrustedContent: Codable, Sendable, Equatable {
     public struct Entry: Codable, Sendable, Equatable {
         public let author: String
@@ -114,8 +113,7 @@ extension ThreadContext {
     static func pullRequest(_ pr: PullRequestNode, notification: GitHubNotification, viewer: String) -> ThreadContext {
         let lastCommit = pr.commits.items.last?.commit
         var events = [Event(author: pr.author.displayLogin, kind: "opened", at: pr.createdAt, body: pr.body)]
-        // Commit authors and dates are whatever the committer typed, so a commit only counts on the viewer's own pull
-        // request, where others rarely push, and never later than the activity GitHub itself recorded.
+        // Commit authors and dates are whatever the committer typed, so only trust them on the viewer's own pull request, capped at GitHub's own activity date.
         if let lastCommit, let login = lastCommit.author?.user?.login, pr.author.displayLogin == viewer {
             events.append(Event(author: login, kind: "commit", at: min(lastCommit.committedDate, notification.updatedAt), body: ""))
         }
@@ -144,7 +142,6 @@ extension ThreadContext {
         facts.reviewRequestedFromTeams = reviewers.compactMap(\.combinedSlug)
         facts.reviewDecision = pr.reviewDecision
         facts.latestReviewByReviewer = Dictionary(latestReviews.map { ($0.author.displayLogin, $0.state) }) { first, _ in first }
-        // Commit dates are set by whoever commits, so only the reviewed commit tells whether the head moved since.
         if let reviewedOid = viewerReview?.commit?.oid {
             facts.newCommitsSinceViewerReview = reviewedOid != pr.headRefOid
         }

@@ -57,7 +57,6 @@ struct NotificationList: View {
         return (visible.compactMap { rowBottoms[$0.id] }.max() ?? CGFloat(visible.count) * 80) + 6
     }
 
-    /// Items are already sorted by priority, so either grouping keeps the most urgent sections and rows first.
     private var sections: [(key: SectionKey, items: [TriageItem])] {
         var sections: [(key: SectionKey, items: [TriageItem])] = []
         for item in model.items {
@@ -203,8 +202,7 @@ struct NotificationRow: View {
 
     private static let moreURL = URL(string: "atbang:more")!
 
-    /// The link keeps its place while hidden, so hovering never reflows the text, and a no-break space ties it to
-    /// the last word so it never wraps onto a line of its own.
+    /// The link is hidden rather than removed so hovering never reflows the text.
     private func summaryText(_ summary: String) -> AttributedString {
         if let expandedDetails { return Self.emphasizingMentions(in: expandedDetails) }
         var text = Self.emphasizingMentions(in: summary)

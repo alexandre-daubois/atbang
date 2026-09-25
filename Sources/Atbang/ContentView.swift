@@ -21,7 +21,6 @@ struct ContentView: View {
             }
         }
         .frame(width: 420)
-        // The menu bar app never becomes active, so closing the popover is the one signal it gets.
         .onDisappear { model.collapseDetails() }
     }
 }

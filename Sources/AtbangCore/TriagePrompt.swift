@@ -60,7 +60,6 @@ public enum TriagePrompt {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
         encoder.dateEncodingStrategy = .iso8601
-        // Encoding plain structs of strings, dates, numbers and booleans cannot fail.
         let data = try! encoder.encode(Input(facts: context.facts, untrusted: context.untrusted))
         return String(decoding: data, as: UTF8.self)
     }

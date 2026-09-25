@@ -14,7 +14,6 @@ final class AppModel {
     private(set) var lastRefresh: Date?
     private(set) var error: String?
     private(set) var lastViewedID: String?
-    /// Rows showing their longer explanation. Not persisted, and reset whenever the popover closes.
     private(set) var expandedIDs: Set<String> = []
     private(set) var requirements: [Requirement] = []
     private(set) var isCheckingRequirements = false
@@ -73,12 +72,10 @@ final class AppModel {
         Task { await checkRequirements() }
     }
 
-    /// Refreshes only start once both tools are installed and signed in.
     func checkRequirements() async {
         guard !isCheckingRequirements else { return }
         isCheckingRequirements = true
         defer { isCheckingRequirements = false }
-        // A tool installed while the app runs is picked up without a trip to Settings.
         if !FileManager.default.isExecutableFile(atPath: ghPath), let found = Executable.locate("gh") { ghPath = found }
         if !FileManager.default.isExecutableFile(atPath: claudePath), let found = Executable.locate("claude") { claudePath = found }
         requirements = await Requirements.check(gh: URL(filePath: ghPath), claude: URL(filePath: claudePath))
@@ -114,7 +111,6 @@ final class AppModel {
         }
     }
 
-    /// An explanation cached for the current state of the thread expands at once, without GitHub nor Claude.
     func showDetails(_ item: TriageItem) async {
         if case .loaded = item.details {
             expandedIDs.insert(item.id)
@@ -240,7 +236,6 @@ final class AppModel {
         timer = Task {
             while !Task.isCancelled {
                 Task { await refresh() }
-                // GitHub asks clients not to poll notifications more often than X-Poll-Interval.
                 try? await Task.sleep(for: .seconds(max(refreshMinutes * 60, pollInterval)))
             }
         }

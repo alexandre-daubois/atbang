@@ -34,7 +34,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .scrollDisabled(true)
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { contentHeight = $1 }
-        // Same as the notification list: the menu bar window only sizes a scrolling Form from an explicit height.
+        // The menu bar window only sizes a scrolling Form from an explicit height.
         .frame(height: contentHeight)
     }
 

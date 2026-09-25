@@ -20,7 +20,6 @@ public struct Triager: Sendable {
         TriagePrompt.fingerprint(model: classifier.model)
     }
 
-    /// GitHub is only queried when the thread has new activity, and Claude only when what it would read changed.
     public func triage(_ notification: GitHubNotification, cached: TriageCache.Entry?) async -> TriageResult {
         var result = TriageResult(threadID: notification.id)
         if let cached, cached.isFresh(for: notification, fingerprint: fingerprint) {

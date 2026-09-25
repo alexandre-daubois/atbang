@@ -31,8 +31,7 @@ public struct ClaudeClassifier: Classifying {
         self.model = model
     }
 
-    /// No tools, no MCP servers, no settings, CLAUDE.md or skills: the thread text reaches a model that can
-    /// only answer through the schema.
+    /// The untrusted thread text reaches a model that can only answer through the schema.
     func arguments(system: String, schema: String) -> [String] {
         [
             "-p",

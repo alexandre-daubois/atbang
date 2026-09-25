@@ -19,7 +19,6 @@ public struct GitHubNotification: Decodable, Sendable, Equatable, Identifiable {
     public let subject: Subject
     public let repository: Repository
 
-    /// Releases and commits also end with an identifier, which is not a number people know the thread by.
     public var number: Int? {
         guard let url = subject.url, ["issues", "pulls", "discussions"].contains(url.deletingLastPathComponent().lastPathComponent) else { return nil }
         return Int(url.lastPathComponent)

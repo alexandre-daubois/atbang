@@ -6,7 +6,7 @@ struct AtbangApp: App {
     @State private var model = AppModel()
 
     init() {
-        // Menu bar only, also when launched through `swift run` without the bundle's LSUIElement.
+        // `swift run` launches without the bundle's LSUIElement.
         NSApplication.shared.setActivationPolicy(.accessory)
     }
 

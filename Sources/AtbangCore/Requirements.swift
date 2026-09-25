@@ -20,7 +20,6 @@ public struct Requirement: Sendable, Equatable, Identifiable {
         self.problem = problem
     }
 
-    /// The command that fixes the problem, as documented by GitHub and Anthropic.
     public var fix: String? {
         switch (tool, problem) {
         case (_, nil): nil
@@ -32,7 +31,6 @@ public struct Requirement: Sendable, Equatable, Identifiable {
     }
 }
 
-/// Checks that both command-line tools are installed and signed in, without any inference or network write.
 public enum Requirements {
     public static func check(gh: URL, claude: URL) async -> [Requirement] {
         async let github = checkGitHub(gh)

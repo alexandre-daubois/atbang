@@ -1,5 +1,4 @@
 #!/bin/sh
-# Prints the Homebrew cask for a released version: scripts/cask.sh <version> <sha256 of the zip>.
 set -eu
 
 cat <<CASK
