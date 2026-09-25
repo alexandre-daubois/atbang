@@ -1,10 +1,5 @@
 import Foundation
 
-public protocol Classifying: Sendable {
-    var model: String { get }
-    func classify(_ input: String) async throws -> Triage
-}
-
 public struct ClaudeClassifier: Classifying {
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case timedOut
@@ -20,9 +15,7 @@ public struct ClaudeClassifier: Classifying {
         }
     }
 
-    static let summaryLimit = 140
-    static let detailsLimit = 420
-
+    public let name = "Claude"
     public let executable: URL
     public let model: String
 
@@ -72,14 +65,14 @@ public struct ClaudeClassifier: Classifying {
 
     static func parse(_ data: Data) throws -> Triage {
         let triage = try structuredOutput(data, as: Triage.self)
-        let summary = sanitize(triage.summary, limit: summaryLimit)
+        let summary = ModelOutput.sanitize(triage.summary, limit: ModelOutput.summaryLimit)
         guard !summary.isEmpty else { throw Failure.invalidOutput("empty summary") }
         return Triage(priority: triage.priority, summary: summary)
     }
 
     static func parseDetails(_ data: Data) throws -> String {
         struct Details: Decodable { let details: String }
-        let details = sanitize(try structuredOutput(data, as: Details.self).details, limit: detailsLimit)
+        let details = ModelOutput.sanitize(try structuredOutput(data, as: Details.self).details, limit: ModelOutput.detailsLimit)
         guard !details.isEmpty else { throw Failure.invalidOutput("empty details") }
         return details
     }
@@ -97,13 +90,6 @@ public struct ClaudeClassifier: Classifying {
             throw Failure.invalidOutput(String((envelope.result ?? "no structured output").prefix(300)))
         }
         return output
-    }
-
-    static func sanitize(_ text: String, limit: Int) -> String {
-        text.components(separatedBy: CharacterSet.controlCharacters.union(.whitespacesAndNewlines))
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-            .truncated(to: limit)
     }
 }
 

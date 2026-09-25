@@ -21,6 +21,13 @@ struct TriagePromptTests {
         #expect(TriagePrompt.cacheKey(model: "sonnet", input: "a") == TriagePrompt.cacheKey(model: "sonnet", input: "a"))
     }
 
+    @Test func teamSlugsKeepTheirSlash() {
+        let input = TriagePrompt.input(for: context)
+
+        #expect(input.contains("o/core"))
+        #expect(!input.contains(#"o\/core"#))
+    }
+
     @Test func cacheKeyChangesWithModelOrInput() {
         let key = TriagePrompt.cacheKey(model: "sonnet", input: "a")
 

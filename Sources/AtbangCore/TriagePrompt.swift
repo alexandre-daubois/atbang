@@ -23,9 +23,10 @@ public enum TriagePrompt {
     else, a merged or closed thread, bot activity, or the viewer wrote the latest activity so the ball is in \
     someone else's court.
 
-    Summary: one plain English sentence of at most 100 characters telling the viewer what is going on and who is \
-    waiting on whom, such as "Review requested from you, CI green", "@bob asks you whether the fix covers 8.3", \
-    "Question for @carol, not you" or "Your PR: changes requested by @dave". Write every person or team as \
+    Summary: one plain English sentence of at most 100 characters that first tells the viewer whether they need \
+    to act, and if so what they have to do, then who is waiting on whom. For example "Your review is requested, CI green", \
+    "Answer @bob: does the fix cover 8.3?", "Address the changes @dave requested on your PR", \
+    "No action: question for @carol" or "No action: merged by @erin". Write every person or team as \
     @login or @org/team exactly as the input spells it, never as a bare or capitalized name. No markdown, no URLs.
     """
 
@@ -58,7 +59,8 @@ public enum TriagePrompt {
             let untrusted: UntrustedContent
         }
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+        // The on-device model copies an escaped `\/` into @org/team mentions.
+        encoder.outputFormatting = [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
         let data = try! encoder.encode(Input(facts: context.facts, untrusted: context.untrusted))
         return String(decoding: data, as: UTF8.self)

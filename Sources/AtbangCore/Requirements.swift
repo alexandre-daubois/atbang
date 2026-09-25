@@ -1,14 +1,15 @@
 import Foundation
+import FoundationModels
 
 public struct Requirement: Sendable, Equatable, Identifiable {
     public enum Tool: String, Sendable {
-        case gh, glab, claude
+        case gh, glab, claude, appleIntelligence
 
         public var forge: Forge? {
             switch self {
             case .gh: .github
             case .glab: .gitlab
-            case .claude: nil
+            case .claude, .appleIntelligence: nil
             }
         }
     }
@@ -16,6 +17,9 @@ public struct Requirement: Sendable, Equatable, Identifiable {
     public enum Problem: Sendable, Equatable {
         case missing
         case signedOut
+        case unsupported
+        case turnedOff
+        case downloading
     }
 
     public let tool: Tool
@@ -39,23 +43,25 @@ public struct Requirement: Sendable, Equatable, Identifiable {
         case (.glab, .signedOut): "glab auth login --hostname \(host ?? "gitlab.com")"
         case (.claude, .missing): "curl -fsSL https://claude.ai/install.sh | bash"
         case (.claude, .signedOut): "claude auth login"
+        case (.appleIntelligence, .turnedOff): #"open "x-apple.systempreferences:com.apple.Siri-Settings.extension""#
+        default: nil
         }
     }
 }
 
 public enum Requirements {
-    /// GitHub and GitLab each work on their own, so only Claude or both CLIs missing hold the app back.
+    /// GitHub and GitLab each work on their own, so only the model or both CLIs missing hold the app back.
     public static func blocking(_ requirements: [Requirement]) -> [Requirement] {
         let missing = requirements.filter { $0.problem != nil }
         let forgeReady = requirements.contains { $0.problem == nil && $0.tool.forge != nil }
-        return missing.contains { $0.tool == .claude } || !forgeReady ? missing : []
+        return missing.contains { $0.tool.forge == nil } || !forgeReady ? missing : []
     }
 
-    public static func check(gh: URL, glab: URL, gitLabHost: String, claude: URL) async -> [Requirement] {
+    public static func check(gh: URL, glab: URL, gitLabHost: String, harness: Harness, claude: URL) async -> [Requirement] {
         async let github = checkGitHub(gh)
         async let gitLab = checkGitLab(glab, host: gitLabHost)
-        async let claudeCode = checkClaude(claude)
-        return await [github, gitLab, claudeCode]
+        async let model = harness == .claudeCode ? checkClaude(claude) : checkAppleIntelligence()
+        return await [github, gitLab, model]
     }
 
     static func checkGitHub(_ gh: URL) async -> Requirement {
@@ -76,5 +82,15 @@ public enum Requirements {
         let output = try? await ProcessRunner.run(claude, arguments: ["auth", "status", "--json"], timeout: .seconds(20))
         let signedIn = output.flatMap { try? JSONDecoder().decode(Status.self, from: $0.stdout) }?.loggedIn == true
         return Requirement(tool: .claude, problem: signedIn ? nil : .signedOut)
+    }
+
+    static func checkAppleIntelligence(_ availability: SystemLanguageModel.Availability = SystemLanguageModel.default.availability) -> Requirement {
+        guard case let .unavailable(reason) = availability else { return Requirement(tool: .appleIntelligence, problem: nil) }
+        let problem: Requirement.Problem = switch reason {
+        case .appleIntelligenceNotEnabled: .turnedOff
+        case .modelNotReady: .downloading
+        default: .unsupported
+        }
+        return Requirement(tool: .appleIntelligence, problem: problem)
     }
 }

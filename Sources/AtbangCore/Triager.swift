@@ -50,7 +50,7 @@ public struct Triager: Sendable {
         do {
             result.entry = entry(try await classifier.classify(input), nil)
         } catch {
-            result.failure = "Claude: \(error)"
+            result.failure = "\(classifier.name): \(error)"
         }
         return result
     }

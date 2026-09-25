@@ -1,24 +1,25 @@
-# Atbang: triage your GitHub and GitLab notifications with Claude
+# Atbang: triage your GitHub and GitLab notifications with an AI model
 
-Atbang is a free, open-source macOS menu bar app that sorts your unread GitHub notifications and your GitLab to-do items by priority with Claude AI. It reads the recent conversation of each pull request, merge request and issue, and the report of each security advisory. Each thread gets a priority and a one-line summary of who waits on whom, so you can clear your GitHub inbox without opening the threads one by one.
+Atbang is a free, open-source macOS menu bar app that sorts your unread GitHub notifications and your GitLab to-do items by priority with an AI model. It reads the recent conversation of each pull request, merge request and issue, and the report of each security advisory. Each thread gets a priority and a one-line summary that first tells you whether you have to act and what to do, then who waits on whom, so you can clear your GitHub inbox without opening the threads one by one.
 
-<p align="center"><img src="demo.png" alt="Atbang, a macOS menu bar app triaging GitHub notifications with Claude" width="450"></p>
+<p align="center"><img src="demo.png" alt="Atbang, a macOS menu bar app triaging GitHub notifications with an AI model" width="450"></p>
 
 ## Features
 
 - GitHub notifications and GitLab to-do items in one list, from gitlab.com or a self-hosted instance. Each forge works on its own as soon as its CLI is signed in.
-- A priority for each unread notification, `!!!`, `!!` or `!`, and a one-line summary that highlights the people involved as `@mentions`.
+- A priority for each unread notification, `!!!`, `!!` or `!`, and a one-line summary that opens with what you have to do, or with "No action", and highlights the people involved as `@mentions`.
 - A More… link for a longer explanation of what happened last and who should act next.
 - Mark as Done from the list, with the checkmark on hover or the right-click menu.
 - Grouping by priority or by repository in one click.
 - The unread count in the menu bar, which you can hide.
-- A choice of Claude model, Haiku, Sonnet, Opus or Fable, and a refresh interval from 1 minute to 1 hour.
-- A cache that skips Claude for threads without new activity.
+- A choice of model: Claude Haiku, Sonnet, Opus or Fable through Claude Code, or Apple's on-device model through Apple Intelligence, which keeps threads on your Mac.
+- A refresh interval from 1 minute to 1 hour.
+- A cache that skips the model for threads without new activity.
 - A native macOS 26 interface with Liquid Glass, in light and dark mode.
 
 ## How it prioritizes
 
-Atbang fetches the thread from GitHub and reads the description, the last 30 comments and the last 20 reviews with up to 10 inline comments each. It computes some facts itself: the pull request state, who wrote last, whether someone requested your review, the CI status, merge conflicts, new commits since your review, and whether someone mentioned you since your last reply. Claude reads the description, the 20 most recent entries of the conversation and these facts, then picks a priority.
+Atbang fetches the thread from GitHub and reads the description, the last 30 comments and the last 20 reviews with up to 10 inline comments each. It computes some facts itself: the pull request state, who wrote last, whether someone requested your review, the CI status, merge conflicts, new commits since your review, and whether someone mentioned you since your last reply. The model reads the description, the 20 most recent entries of the conversation and these facts, then picks a priority.
 
 On GitLab, Atbang reads the description and the last 50 notes of the merge request or issue, system notes included, and computes the same facts where GitLab has them: the state, the draft flag, who wrote last, whether you are still a reviewer who hasn't finished, the review state of each reviewer, the head pipeline status and merge conflicts.
 
@@ -32,7 +33,7 @@ Atbang needs macOS 26 Tahoe or later. Homebrew adds the tap and installs the Git
 brew install --cask alexandre-daubois/tap/atbang
 ```
 
-If you had already added the tap, run `brew update` first so Homebrew sees Atbang. Then sign in to GitHub and install Claude Code if you haven't yet:
+If you had already added the tap, run `brew update` first so Homebrew sees Atbang. Then sign in to GitHub and install Claude Code if you haven't yet. Claude Code isn't needed if you pick Apple Intelligence in Settings, which needs a Mac with Apple Intelligence turned on:
 
 ```sh
 gh auth login
@@ -60,7 +61,7 @@ brew uninstall --cask --zap alexandre-daubois/tap/atbang
 
 ## Privacy and security
 
-Since version 1.0.2, Atbang carries a Developer ID signature and Apple notarizes each release. The app reads from GitHub and GitLab and writes one thing, marking a thread or a to-do item as done when you ask. It takes the token of the GitHub CLI, keeps it in memory and sends it to `api.github.com` alone. GitLab requests go through `glab api`, so the GitLab token never leaves the GitLab CLI, and Atbang refuses any request other than a read, a GraphQL query without a mutation or Mark as Done. `claude -p` runs without any tool, MCP server or settings. Atbang hands it the thread text as untrusted data, tells Claude to ignore any instruction inside, makes it answer through a strict JSON schema and displays the answer as plain text.
+Since version 1.0.2, Atbang carries a Developer ID signature and Apple notarizes each release. The app reads from GitHub and GitLab and writes one thing, marking a thread or a to-do item as done when you ask. It takes the token of the GitHub CLI, keeps it in memory and sends it to `api.github.com` alone. GitLab requests go through `glab api`, so the GitLab token never leaves the GitLab CLI, and Atbang refuses any request other than a read, a GraphQL query without a mutation or Mark as Done. `claude -p` runs without any tool, MCP server or settings. Atbang hands it the thread text as untrusted data, tells Claude to ignore any instruction inside, makes it answer through a strict JSON schema and displays the answer as plain text. With Apple Intelligence, the same prompt goes to Apple's on-device model through the Foundation Models framework, without any tool, and the answer comes back through a fixed structure.
 
 ## License
 

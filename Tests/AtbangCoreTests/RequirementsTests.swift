@@ -1,4 +1,5 @@
 import Foundation
+import FoundationModels
 @testable import AtbangCore
 import Testing
 
@@ -17,7 +18,7 @@ struct RequirementsTests {
         let glab = try executable("exit 0")
         let claude = try executable(#"echo '{"loggedIn": true, "authMethod": "claude.ai"}'"#)
 
-        let requirements = await Requirements.check(gh: gh, glab: glab, gitLabHost: "gitlab.com", claude: claude)
+        let requirements = await Requirements.check(gh: gh, glab: glab, gitLabHost: "gitlab.com", harness: .claudeCode, claude: claude)
 
         #expect(requirements == [Requirement(tool: .gh, problem: nil), Requirement(tool: .glab, problem: nil, host: "gitlab.com"), Requirement(tool: .claude, problem: nil)])
         #expect(requirements.allSatisfy { $0.fix == nil })
@@ -28,6 +29,7 @@ struct RequirementsTests {
             gh: URL(filePath: "/nonexistent/gh"),
             glab: URL(filePath: "/nonexistent/glab"),
             gitLabHost: "gitlab.com",
+            harness: .claudeCode,
             claude: URL(filePath: "/nonexistent/claude")
         )
 
@@ -46,6 +48,41 @@ struct RequirementsTests {
         let requirements = zip([Requirement.Tool.gh, .glab, .claude], problems).map { Requirement(tool: $0, problem: $1) }
 
         #expect(Requirements.blocking(requirements).map(\.tool) == blocking)
+    }
+
+    @Test(arguments: [
+        (Requirement.Problem?.none, [Requirement.Tool]()),
+        (.turnedOff, [.glab, .appleIntelligence]),
+    ])
+    func appleIntelligenceBlocksLikeClaude(problem: Requirement.Problem?, blocking: [Requirement.Tool]) {
+        let requirements = [Requirement(tool: .gh, problem: nil), Requirement(tool: .glab, problem: .missing), Requirement(tool: .appleIntelligence, problem: problem)]
+
+        #expect(Requirements.blocking(requirements).map(\.tool) == blocking)
+    }
+
+    @Test func appleIntelligenceSkipsClaude() async {
+        let requirements = await Requirements.check(
+            gh: URL(filePath: "/nonexistent/gh"),
+            glab: URL(filePath: "/nonexistent/glab"),
+            gitLabHost: "gitlab.com",
+            harness: .appleIntelligence,
+            claude: URL(filePath: "/nonexistent/claude")
+        )
+
+        #expect(requirements.map(\.tool) == [.gh, .glab, .appleIntelligence])
+    }
+
+    @Test(arguments: [
+        (SystemLanguageModel.Availability.available, Requirement.Problem?.none, String?.none),
+        (.unavailable(.appleIntelligenceNotEnabled), .turnedOff, #"open "x-apple.systempreferences:com.apple.Siri-Settings.extension""#),
+        (.unavailable(.modelNotReady), .downloading, nil),
+        (.unavailable(.deviceNotEligible), .unsupported, nil),
+    ])
+    func appleIntelligenceAvailability(availability: SystemLanguageModel.Availability, problem: Requirement.Problem?, fix: String?) {
+        let requirement = Requirements.checkAppleIntelligence(availability)
+
+        #expect(requirement == Requirement(tool: .appleIntelligence, problem: problem))
+        #expect(requirement.fix == fix)
     }
 
     @Test func nothingBlocksBeforeTheFirstCheck() {

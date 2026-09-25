@@ -23,7 +23,7 @@ struct ClaudeClassifierTests {
         let long = String(repeating: "word ", count: 60)
         let triage = try ClaudeClassifier.parse(envelope(#"{"priority":"low","summary":"\#(long)"}"#))
 
-        #expect(triage.summary.count == ClaudeClassifier.summaryLimit + 1)
+        #expect(triage.summary.count == ModelOutput.summaryLimit + 1)
     }
 
     @Test(arguments: [
@@ -63,7 +63,7 @@ struct ClaudeClassifierTests {
         let long = String(repeating: "word ", count: 200)
         let details = try ClaudeClassifier.parseDetails(envelope(#"{"details":"\#(long)"}"#))
 
-        #expect(details.count == ClaudeClassifier.detailsLimit + 1)
+        #expect(details.count == ModelOutput.detailsLimit + 1)
     }
 
     @Test(arguments: [

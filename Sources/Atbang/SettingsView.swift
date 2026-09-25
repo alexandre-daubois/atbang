@@ -1,4 +1,5 @@
 import AppKit
+import AtbangCore
 import SwiftUI
 
 struct SettingsView: View {
@@ -14,14 +15,24 @@ struct SettingsView: View {
                 Toggle("Show the notification count in the menu bar", isOn: $model.showsMenuBarCount)
             }
             Section {
-                Picker("Model", selection: $model.claudeModel) {
-                    ForEach(AppModel.claudeModels, id: \.self) { Text($0.capitalized).tag($0) }
+                Picker("Triage with", selection: $model.harness) {
+                    ForEach(Harness.allCases, id: \.self) { Text($0.name).tag($0) }
                 }
-                ExecutableField(path: $model.claudePath)
+                if model.harness == .claudeCode {
+                    Picker("Model", selection: $model.claudeModel) {
+                        ForEach(AppModel.claudeModels, id: \.self) { Text($0.capitalized).tag($0) }
+                    }
+                    ExecutableField(path: $model.claudePath)
+                }
             } header: {
-                Text("Claude")
+                Text("Triage")
             } footer: {
-                SettingsFooter("Each alias follows the latest version of its model. A thread only goes back to Claude when it changes, or when the model does.")
+                switch model.harness {
+                case .claudeCode:
+                    SettingsFooter("Each alias follows the latest version of its model. A thread only goes back to Claude when it changes, or when the model does.")
+                case .appleIntelligence:
+                    SettingsFooter("Apple’s on-device model runs on this Mac, so threads never leave it. A thread only goes back to the model when it changes.")
+                }
             }
             Section {
                 ExecutableField(path: $model.ghPath)

@@ -33,6 +33,14 @@ final class AppModel {
         didSet { UserDefaults.standard.set(showsMenuBarCount, forKey: "showsMenuBarCount") }
     }
 
+    var harness = UserDefaults.standard.string(forKey: "harness").flatMap(Harness.init) ?? .claudeCode {
+        didSet {
+            UserDefaults.standard.set(harness.rawValue, forKey: "harness")
+            etag = nil
+            Task { await checkRequirements() }
+        }
+    }
+
     var claudeModel = UserDefaults.standard.string(forKey: "claudeModel").flatMap { claudeModels.contains($0) ? $0 : nil } ?? "sonnet" {
         didSet {
             UserDefaults.standard.set(claudeModel, forKey: "claudeModel")
@@ -95,9 +103,17 @@ final class AppModel {
             gh: URL(filePath: ghPath),
             glab: URL(filePath: glabPath),
             gitLabHost: gitLabHost,
+            harness: harness,
             claude: URL(filePath: claudePath)
         )
         if missingRequirements.isEmpty { scheduleRefreshes() }
+    }
+
+    private var classifier: any Classifying {
+        switch harness {
+        case .claudeCode: ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel)
+        case .appleIntelligence: AppleClassifier()
+        }
     }
 
     private var gitLabClient: GitLabClient {
@@ -155,8 +171,9 @@ final class AppModel {
         do {
             let context = try await contextProvider(for: item.notification.forge).context(for: item.notification)
             let input = TriagePrompt.input(for: context)
-            let explanation = try await ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel).explain(input)
-            if cache[item.id]?.key == TriagePrompt.cacheKey(model: claudeModel, input: input) {
+            let classifier = classifier
+            let explanation = try await classifier.explain(input)
+            if cache[item.id]?.key == TriagePrompt.cacheKey(model: classifier.model, input: input) {
                 cache[item.id]?.details = explanation
                 try? cache.save(to: TriageCache.defaultURL)
             }
@@ -238,10 +255,7 @@ final class AppModel {
         error = failures.isEmpty ? nil : failures.joined(separator: "\n")
         guard !providers.isEmpty else { return }
 
-        let triager = Triager(
-            contexts: ForgeContextProvider(providers),
-            classifier: ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel)
-        )
+        let triager = Triager(contexts: ForgeContextProvider(providers), classifier: classifier)
         // After the last await, so a thread marked done while this refresh waited stays gone.
         let notifications = fetched.filter { notification in
             markedDone[notification.id].map { notification.updatedAt > $0 } ?? true
@@ -276,7 +290,7 @@ final class AppModel {
 
         self.cache.prune(keeping: Set(notifications.map(\.id)))
         try? self.cache.save(to: TriageCache.defaultURL)
-        if triager.fingerprint == TriagePrompt.fingerprint(model: claudeModel) { etag = newETag }
+        if triager.fingerprint == TriagePrompt.fingerprint(model: classifier.model) { etag = newETag }
         lastRefresh = .now
     }
 

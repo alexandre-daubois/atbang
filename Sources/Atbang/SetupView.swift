@@ -7,7 +7,7 @@ struct SetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Atbang reads your notifications with the GitHub CLI, the GitLab CLI or both, and triages them with Claude Code. Run the commands below in Terminal, then check again.")
+            Text("Atbang reads your notifications with the GitHub CLI, the GitLab CLI or both, and triages them with \(model.harness.name). Run the commands below in Terminal, then check again.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -80,22 +80,23 @@ private struct RequirementRow: View {
         case .gh: "GitHub CLI"
         case .glab: "GitLab CLI"
         case .claude: "Claude Code"
+        case .appleIntelligence: "Apple Intelligence"
         }
     }
 
     private var symbol: String {
         switch requirement.problem {
         case nil: "checkmark.circle.fill"
-        case .missing: "xmark.circle.fill"
-        case .signedOut: "exclamationmark.circle.fill"
+        case .missing, .unsupported: "xmark.circle.fill"
+        case .signedOut, .turnedOff, .downloading: "exclamationmark.circle.fill"
         }
     }
 
     private var color: Color {
         switch requirement.problem {
         case nil: .green
-        case .missing: .red
-        case .signedOut: .orange
+        case .missing, .unsupported: .red
+        case .signedOut, .turnedOff, .downloading: .orange
         }
     }
 
@@ -104,6 +105,9 @@ private struct RequirementRow: View {
         case nil: "Ready"
         case .missing: "Not installed"
         case .signedOut: "Signed out"
+        case .unsupported: "Not supported on this Mac"
+        case .turnedOff: "Turned off"
+        case .downloading: "Downloading"
         }
     }
 }

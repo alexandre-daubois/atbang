@@ -18,6 +18,7 @@ private struct StubContexts: ContextProviding {
 }
 
 private struct StubClassifier: Classifying {
+    var name = "Claude"
     var model = "sonnet"
     let result: Result<Triage, ClaudeClassifier.Failure>
     let calls = CallCounter()
@@ -25,6 +26,10 @@ private struct StubClassifier: Classifying {
     func classify(_ input: String) async throws -> Triage {
         await calls.record(input)
         return try result.get()
+    }
+
+    func explain(_ input: String) async throws -> String {
+        ""
     }
 }
 
@@ -113,5 +118,12 @@ struct TriagerTests {
         let result = await Triager(contexts: StubContexts(result: .success(context)), classifier: classifier).triage(notification, cached: nil)
 
         #expect(result == TriageResult(threadID: "1", htmlURL: context.htmlURL, failure: "Claude: claude timed out"))
+    }
+
+    @Test func namesTheHarnessThatFailed() async {
+        let classifier = StubClassifier(name: "Apple Intelligence", model: "apple-on-device", result: .failure(.timedOut))
+        let result = await Triager(contexts: StubContexts(result: .success(context)), classifier: classifier).triage(notification, cached: nil)
+
+        #expect(result.failure == "Apple Intelligence: claude timed out")
     }
 }
