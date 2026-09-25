@@ -188,18 +188,18 @@ final class AppModel {
         }
         sortItems()
 
-        let cache = cache
-        let stale = notifications.filter { cache[$0.id]?.isFresh(for: $0, fingerprint: fingerprint) != true }
+        let snapshot = cache
+        let stale = notifications.filter { snapshot[$0.id]?.isFresh(for: $0, fingerprint: fingerprint) != true }
         await withTaskGroup(of: TriageResult.self) { group in
             var queue = stale.makeIterator()
             for _ in 0..<Self.maxConcurrentTriages {
                 guard let notification = queue.next() else { break }
-                group.addTask { await triager.triage(notification, cached: cache[notification.id]) }
+                group.addTask { await triager.triage(notification, cached: snapshot[notification.id]) }
             }
             for await result in group {
                 apply(result)
                 if let notification = queue.next() {
-                    group.addTask { await triager.triage(notification, cached: cache[notification.id]) }
+                    group.addTask { await triager.triage(notification, cached: snapshot[notification.id]) }
                 }
             }
         }
