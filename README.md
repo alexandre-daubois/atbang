@@ -6,8 +6,29 @@ Atbang is a free and open-source macOS menu bar app that sorts your unread GitHu
 
 ## Install
 
+Atbang needs macOS 26 Tahoe or later. Homebrew adds the tap and installs the GitHub CLI along the way:
+
 ```sh
 brew install --cask alexandre-daubois/tap/atbang
 ```
 
-Atbang needs macOS 26 Tahoe or later, the GitHub CLI (`gh auth login`) and Claude Code (`claude auth login`). It only reads your GitHub notifications, except when you mark a thread as done, and the cask removes the quarantine flag because the app isn't notarized yet.
+If the tap was already there, for Ember for instance, run `brew update` first so Homebrew sees Atbang. Then sign in to GitHub and install Claude Code if you haven't yet:
+
+```sh
+gh auth login
+curl -fsSL https://claude.ai/install.sh | bash
+claude auth login
+```
+
+Atbang lands in your Applications folder and runs in the menu bar. It checks both tools when it starts and tells you what's missing.
+
+## Update and uninstall
+
+```sh
+brew upgrade --cask alexandre-daubois/tap/atbang
+brew uninstall --cask --zap alexandre-daubois/tap/atbang
+```
+
+`--zap` also removes the cache and the settings.
+
+Atbang only reads your GitHub notifications, except when you mark a thread as done. It isn't notarized yet, so the cask removes its quarantine flag.
