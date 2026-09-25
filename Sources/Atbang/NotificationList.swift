@@ -73,7 +73,7 @@ struct NotificationList: View {
     @ViewBuilder private var placeholder: some View {
         if let error = model.error {
             ContentUnavailableView {
-                Label("Can’t Reach GitHub", systemImage: "exclamationmark.icloud")
+                Label("Can’t Load Notifications", systemImage: "exclamationmark.icloud")
             } description: {
                 Text(error).lineLimit(4)
             } actions: {
@@ -227,7 +227,7 @@ struct NotificationRow: View {
                     .layoutPriority(-1)
             }
             if let number = item.notification.number {
-                Text(verbatim: "#\(number)").monospacedDigit()
+                Text(verbatim: "\(item.notification.subject.type == "MergeRequest" ? "!" : "#")\(number)").monospacedDigit()
             }
             if showsRepository || item.notification.number != nil {
                 Text("·")
@@ -265,7 +265,7 @@ struct NotificationRow: View {
 
     private var symbol: String {
         switch item.notification.subject.type {
-        case "PullRequest": "arrow.triangle.pull"
+        case "PullRequest", "MergeRequest": "arrow.triangle.pull"
         case "Issue": "smallcircle.filled.circle"
         case "RepositoryAdvisory": "shield.lefthalf.filled"
         case "Release": "tag"
@@ -285,6 +285,7 @@ struct NotificationRow: View {
         case "ci_activity": "CI activity"
         case "manual": "Subscribed"
         case "security_advisory_credit": "Credited"
+        case "marked": "To-do added"
         case let reason:
             reason.prefix(1).uppercased() + reason.dropFirst().replacingOccurrences(of: "_", with: " ")
         }

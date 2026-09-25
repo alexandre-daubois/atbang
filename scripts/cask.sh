@@ -8,7 +8,7 @@ cask "atbang" do
 
   url "https://github.com/alexandre-daubois/atbang/releases/download/v#{version}/Atbang-#{version}.zip"
   name "Atbang"
-  desc "Menu bar app that triages GitHub notifications with Claude"
+  desc "Menu bar app that triages GitHub and GitLab notifications with Claude"
   homepage "https://github.com/alexandre-daubois/atbang"
 
   depends_on formula: "gh"

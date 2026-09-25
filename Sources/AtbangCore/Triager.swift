@@ -32,7 +32,7 @@ public struct Triager: Sendable {
         do {
             context = try await contexts.context(for: notification)
         } catch {
-            result.failure = "GitHub: \(error)"
+            result.failure = "\(notification.forge.rawValue): \(error)"
             return result
         }
 

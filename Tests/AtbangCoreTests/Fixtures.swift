@@ -31,6 +31,27 @@ enum Fixtures {
         return try! GitHubClient.restDecoder.decode(GitHubNotification.self, from: Data(json.utf8))
     }
 
+    static func gitLabTodoJSON(
+        id: Int = 1,
+        type: String = "MergeRequest",
+        url: String = "https://gitlab.example.com/o/r/-/merge_requests/7",
+        targetUpdatedAt: String = "2026-09-22T12:00:00.000Z"
+    ) -> String {
+        """
+        {"id":\(id),"project":{"id":3,"path_with_namespace":"o/r"},"author":{"username":"bob"},"action_name":"review_requested",\
+        "target_type":"\(type)","target":{"iid":7,"title":"Add feature","updated_at":"\(targetUpdatedAt)"},"target_url":"\(url)",\
+        "body":"Add feature","state":"pending","created_at":"2026-09-21T10:00:00.123Z","updated_at":"2026-09-21T10:00:00.123Z"}
+        """
+    }
+
+    static func gitLabNotification(type: String = "MergeRequest", url: String = "https://gitlab.example.com/o/r/-/merge_requests/7") -> GitHubNotification {
+        try! GitLabClient.restDecoder.decode(GitLabTodo.self, from: Data(gitLabTodoJSON(type: type, url: url).utf8)).notification
+    }
+
+    static func gitLabGraphQL<T: Decodable>(_ json: String, as _: T.Type = T.self) -> T {
+        try! GitLabClient.graphQLDecoder.decode(T.self, from: Data(json.utf8))
+    }
+
     static func graphQL<T: Decodable>(_ json: String, as _: T.Type = T.self) -> T {
         try! GitHubClient.graphQLDecoder.decode(T.self, from: Data(json.utf8))
     }
@@ -93,5 +114,40 @@ enum Fixtures {
     {"ghsa_id":"GHSA-xxxx-yyyy-zzzz","summary":"Heap overflow in parser","description":"Details","state":"triage","severity":"high",
      "html_url":"https://github.com/o/r/security/advisories/GHSA-xxxx-yyyy-zzzz","author":{"login":"reporter"},
      "collaborating_users":[{"login":"alice"}]}
+    """
+
+    static let mergeRequest = """
+    {"webUrl":"https://gitlab.example.com/o/r/-/merge_requests/7","title":"Add feature","description":"Please have a look","state":"opened",
+     "draft":false,"createdAt":"2026-09-20T10:00:00Z","conflicts":false,
+     "author":{"username":"bob"},
+     "assignees":{"nodes":[]},
+     "reviewers":{"nodes":[
+       {"username":"alice","mergeRequestInteraction":{"reviewState":"UNREVIEWED"}},
+       {"username":"carol","mergeRequestInteraction":{"reviewState":"APPROVED"}},
+       {"username":"dave","mergeRequestInteraction":null}]},
+     "headPipeline":{"status":"SUCCESS"},
+     "notes":{"nodes":[
+       {"author":{"username":"carol"},"createdAt":"2026-09-21T09:59:00Z","body":"nit","system":false,"position":{"filePath":"a.swift"}},
+       {"author":{"username":"carol"},"createdAt":"2026-09-21T10:00:00Z","body":"approved this merge request","system":true,"position":null},
+       {"author":null,"createdAt":"2026-09-22T11:00:00Z","body":"@alice what do you think?","system":false,"position":null}]}}
+    """
+
+    static let ownMergeRequestWithConflict = """
+    {"webUrl":"https://gitlab.example.com/o/r/-/merge_requests/10","title":"Refactor","description":null,"state":"opened",
+     "draft":true,"createdAt":"2026-09-20T10:00:00Z","conflicts":true,
+     "author":{"username":"alice.smith"},
+     "assignees":{"nodes":[{"username":"alice.smith"}]},
+     "reviewers":{"nodes":[{"username":"carol","mergeRequestInteraction":{"reviewState":"REQUESTED_CHANGES"}}]},
+     "headPipeline":{"status":"FAILED"},
+     "notes":{"nodes":[
+       {"author":{"username":"carol"},"createdAt":"2026-09-21T10:00:00Z","body":"Please split this","system":false,"position":null},
+       {"author":{"username":"alice.smith"},"createdAt":"2026-09-21T12:00:00Z","body":"added 1 commit","system":true,"position":null}]}}
+    """
+
+    static let gitLabIssue = """
+    {"webUrl":"https://gitlab.example.com/o/r/-/work_items/9","title":"Crash","description":"It crashes","state":"closed",
+     "createdAt":"2026-09-20T10:00:00Z","author":{"username":"dave"},
+     "assignees":{"nodes":[{"username":"alice"}]},
+     "notes":{"nodes":[{"author":{"username":"erin"},"createdAt":"2026-09-21T10:00:00Z","body":"@bob can you check?","system":false,"position":null}]}}
     """
 }

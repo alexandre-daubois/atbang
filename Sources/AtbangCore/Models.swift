@@ -1,5 +1,10 @@
 import Foundation
 
+public enum Forge: String, Sendable {
+    case github = "GitHub"
+    case gitlab = "GitLab"
+}
+
 public struct GitHubNotification: Decodable, Sendable, Equatable, Identifiable {
     public struct Subject: Decodable, Sendable, Equatable {
         public let title: String
@@ -18,9 +23,14 @@ public struct GitHubNotification: Decodable, Sendable, Equatable, Identifiable {
     public let lastReadAt: Date?
     public let subject: Subject
     public let repository: Repository
+    public var forge = Forge.github
+
+    private enum CodingKeys: String, CodingKey {
+        case id, reason, updatedAt, lastReadAt, subject, repository
+    }
 
     public var number: Int? {
-        guard let url = subject.url, ["issues", "pulls", "discussions"].contains(url.deletingLastPathComponent().lastPathComponent) else { return nil }
+        guard let url = subject.url, ["issues", "pulls", "discussions", "merge_requests", "work_items"].contains(url.deletingLastPathComponent().lastPathComponent) else { return nil }
         return Int(url.lastPathComponent)
     }
 }
@@ -74,7 +84,8 @@ public struct TriageItem: Identifiable, Sendable, Equatable {
 
     public init(notification: GitHubNotification, triage: Triage?) {
         self.notification = notification
-        htmlURL = notification.repository.htmlUrl
+        // A GitLab to-do already points at the web page, a GitHub subject only at the API.
+        htmlURL = (notification.forge == .gitlab ? notification.subject.url : nil) ?? notification.repository.htmlUrl
         self.triage = triage
         status = .pending
     }

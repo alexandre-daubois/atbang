@@ -170,7 +170,7 @@ private struct GraphQLPayload<Variables: Encodable>: Encodable {
     let variables: Variables
 }
 
-private struct GraphQLResponse<T: Decodable>: Decodable {
+struct GraphQLResponse<T: Decodable>: Decodable {
     struct Message: Decodable { let message: String }
     let data: T?
     let errors: [Message]?

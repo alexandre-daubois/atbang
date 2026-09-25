@@ -7,7 +7,7 @@ struct SetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Atbang reads your notifications with the GitHub CLI and triages them with Claude Code. Run the commands below in Terminal, then check again.")
+            Text("Atbang reads your notifications with the GitHub CLI, the GitLab CLI or both, and triages them with Claude Code. Run the commands below in Terminal, then check again.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -44,7 +44,7 @@ private struct RequirementRow: View {
                 .font(.system(size: 15))
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(requirement.tool == .gh ? "GitHub CLI" : "Claude Code")
+                    Text(name)
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Text(status)
@@ -73,6 +73,14 @@ private struct RequirementRow: View {
             }
         }
         .padding(12)
+    }
+
+    private var name: String {
+        switch requirement.tool {
+        case .gh: "GitHub CLI"
+        case .glab: "GitLab CLI"
+        case .claude: "Claude Code"
+        }
     }
 
     private var symbol: String {

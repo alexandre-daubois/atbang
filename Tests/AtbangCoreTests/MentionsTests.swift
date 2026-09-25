@@ -14,8 +14,10 @@ struct MentionsTests {
         ("Closed PR, nothing needs you", []),
         ("Reported by bob@example.com", []),
         ("Trailing @ sign and @-dash", []),
+        ("@alexandre.daubois and @jane_doe reviewed.", ["@alexandre.daubois", "@jane_doe"]),
+        ("Ask @gitlab-org/cli/maintainers.", ["@gitlab-org/cli/maintainers"]),
     ])
-    func findsGitHubMentions(text: String, expected: [String]) {
+    func findsMentions(text: String, expected: [String]) {
         #expect(Mentions.ranges(in: text).map { String(text[$0]) } == expected)
     }
 }

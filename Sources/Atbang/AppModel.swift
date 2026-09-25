@@ -41,6 +41,14 @@ final class AppModel {
         }
     }
 
+    var gitLabHost = UserDefaults.standard.string(forKey: "gitLabHost") ?? "gitlab.com" {
+        didSet { UserDefaults.standard.set(gitLabHost, forKey: "gitLabHost") }
+    }
+
+    var glabPath = UserDefaults.standard.string(forKey: "glabPath") ?? Executable.locate("glab") ?? "/opt/homebrew/bin/glab" {
+        didSet { UserDefaults.standard.set(glabPath, forKey: "glabPath") }
+    }
+
     var ghPath = UserDefaults.standard.string(forKey: "ghPath") ?? Executable.locate("gh") ?? "/opt/homebrew/bin/gh" {
         didSet { UserDefaults.standard.set(ghPath, forKey: "ghPath") }
     }
@@ -65,7 +73,11 @@ final class AppModel {
     }
 
     var missingRequirements: [Requirement] {
-        requirements.filter { $0.problem != nil }
+        Requirements.blocking(requirements)
+    }
+
+    private var readyForges: [Forge] {
+        requirements.filter { $0.problem == nil }.compactMap(\.tool.forge)
     }
 
     init() {
@@ -77,9 +89,19 @@ final class AppModel {
         isCheckingRequirements = true
         defer { isCheckingRequirements = false }
         if !FileManager.default.isExecutableFile(atPath: ghPath), let found = Executable.locate("gh") { ghPath = found }
+        if !FileManager.default.isExecutableFile(atPath: glabPath), let found = Executable.locate("glab") { glabPath = found }
         if !FileManager.default.isExecutableFile(atPath: claudePath), let found = Executable.locate("claude") { claudePath = found }
-        requirements = await Requirements.check(gh: URL(filePath: ghPath), claude: URL(filePath: claudePath))
-        if missingRequirements.isEmpty, timer == nil { scheduleRefreshes() }
+        requirements = await Requirements.check(
+            gh: URL(filePath: ghPath),
+            glab: URL(filePath: glabPath),
+            gitLabHost: gitLabHost,
+            claude: URL(filePath: claudePath)
+        )
+        if missingRequirements.isEmpty { scheduleRefreshes() }
+    }
+
+    private var gitLabClient: GitLabClient {
+        GitLabClient(glab: URL(filePath: glabPath), host: gitLabHost)
     }
 
     func collapseDetails() {
@@ -87,7 +109,7 @@ final class AppModel {
     }
 
     func open(_ item: TriageItem) {
-        guard item.htmlURL.scheme == "https", item.htmlURL.host() == "github.com" else { return }
+        guard item.htmlURL.scheme == "https", let host = item.htmlURL.host(), ["github.com", gitLabHost].contains(host) else { return }
         lastViewedID = item.id
         NSWorkspace.shared.open(item.htmlURL)
     }
@@ -97,8 +119,12 @@ final class AppModel {
         let removed = items.remove(at: index)
         markedDone[removed.id] = removed.notification.updatedAt
         do {
-            let client = GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath)))
-            try await client.markAsDone(threadID: removed.id)
+            switch removed.notification.forge {
+            case .github:
+                try await GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath))).markAsDone(threadID: removed.id)
+            case .gitlab:
+                try await gitLabClient.markAsDone(removed.notification)
+            }
             cache[removed.id] = nil
             try? cache.save(to: TriageCache.defaultURL)
         } catch {
@@ -127,8 +153,7 @@ final class AppModel {
         items[index].details = .loading
         let details: TriageItem.Details
         do {
-            let client = GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath)))
-            let context = try await GitHubContextProvider(client: client, viewer: try await client.viewerLogin()).context(for: item.notification)
+            let context = try await contextProvider(for: item.notification.forge).context(for: item.notification)
             let input = TriagePrompt.input(for: context)
             let explanation = try await ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel).explain(input)
             if cache[item.id]?.key == TriagePrompt.cacheKey(model: claudeModel, input: input) {
@@ -143,36 +168,83 @@ final class AppModel {
         items[index].details = details
     }
 
+    private func contextProvider(for forge: Forge) async throws -> any ContextProviding {
+        switch forge {
+        case .github:
+            let client = GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath)))
+            return GitHubContextProvider(client: client, viewer: try await client.viewerLogin())
+        case .gitlab:
+            return GitLabContextProvider(client: gitLabClient, viewer: try await gitLabClient.viewerUsername())
+        }
+    }
+
+    private struct Fetched: Sendable {
+        let notifications: [GitHubNotification]
+        let contexts: any ContextProviding
+        var etag: String?
+    }
+
+    private func fetch(_ forge: Forge) async throws -> Fetched {
+        switch forge {
+        case .github:
+            let client = GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath)))
+            // A thread left pending or failed needs another pass even when the list itself did not change.
+            let unread = try await client.unreadNotifications(ifNoneMatch: items.allSatisfy { $0.status == .done } ? etag : nil)
+            pollInterval = unread.pollInterval ?? pollInterval
+            return Fetched(
+                notifications: unread.notifications ?? items.map(\.notification).filter { $0.forge == .github },
+                contexts: GitHubContextProvider(client: client, viewer: try await client.viewerLogin()),
+                etag: unread.etag
+            )
+        case .gitlab:
+            async let todos = gitLabClient.pendingTodos()
+            async let viewer = gitLabClient.viewerUsername()
+            return Fetched(notifications: try await todos, contexts: GitLabContextProvider(client: gitLabClient, viewer: try await viewer))
+        }
+    }
+
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let notifications: [GitHubNotification]
-        let unread: GitHubClient.UnreadNotifications
-        let triager: Triager
-        do {
-            let client = GitHubClient(token: try await GitHubClient.token(gh: URL(filePath: ghPath)))
-            // A thread left pending or failed needs another pass even when the list itself did not change.
-            unread = try await client.unreadNotifications(ifNoneMatch: items.allSatisfy { $0.status == .done } ? etag : nil)
-            pollInterval = unread.pollInterval ?? pollInterval
-            guard let fetched = unread.notifications else {
-                error = nil
-                lastRefresh = .now
-                return
+        var fetched: [GitHubNotification] = []
+        var providers: [Forge: any ContextProviding] = [:]
+        var failures: [String] = []
+        var newETag: String?
+        await withTaskGroup(of: (Forge, Result<Fetched, any Error>).self) { group in
+            for forge in readyForges {
+                group.addTask {
+                    do {
+                        return (forge, .success(try await self.fetch(forge)))
+                    } catch {
+                        return (forge, .failure(error))
+                    }
+                }
             }
-            triager = Triager(
-                contexts: GitHubContextProvider(client: client, viewer: try await client.viewerLogin()),
-                classifier: ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel)
-            )
-            // After the last await, so a thread marked done while this refresh waited stays gone.
-            notifications = fetched.filter { notification in
-                markedDone[notification.id].map { notification.updatedAt > $0 } ?? true
+            for await (forge, result) in group {
+                switch result {
+                case let .success(result):
+                    fetched += result.notifications
+                    providers[forge] = result.contexts
+                    if forge == .github { newETag = result.etag }
+                case let .failure(error):
+                    failures.append("\(forge.rawValue): \(error)")
+                    // Keeps the threads of an unreachable forge on screen and in the cache.
+                    fetched += items.map(\.notification).filter { $0.forge == forge }
+                }
             }
-            error = nil
-        } catch {
-            self.error = String(describing: error)
-            return
+        }
+        error = failures.isEmpty ? nil : failures.joined(separator: "\n")
+        guard !providers.isEmpty else { return }
+
+        let triager = Triager(
+            contexts: ForgeContextProvider(providers),
+            classifier: ClaudeClassifier(executable: URL(filePath: claudePath), model: claudeModel)
+        )
+        // After the last await, so a thread marked done while this refresh waited stays gone.
+        let notifications = fetched.filter { notification in
+            markedDone[notification.id].map { notification.updatedAt > $0 } ?? true
         }
 
         let fingerprint = triager.fingerprint
@@ -204,7 +276,7 @@ final class AppModel {
 
         self.cache.prune(keeping: Set(notifications.map(\.id)))
         try? self.cache.save(to: TriageCache.defaultURL)
-        if triager.fingerprint == TriagePrompt.fingerprint(model: claudeModel) { etag = unread.etag }
+        if triager.fingerprint == TriagePrompt.fingerprint(model: claudeModel) { etag = newETag }
         lastRefresh = .now
     }
 

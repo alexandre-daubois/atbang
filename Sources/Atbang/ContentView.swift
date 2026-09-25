@@ -52,7 +52,8 @@ private struct Header: View {
                 Group {
                     groupByRepository
                     Button("Refresh", systemImage: "arrow.clockwise") {
-                        Task { model.missingRequirements.isEmpty ? await model.refresh() : await model.checkRequirements() }
+                        // Checking again first picks up a CLI signed in since, which turns its forge on.
+                        Task { await model.checkRequirements() }
                     }
                     .symbolEffect(.rotate, isActive: model.isRefreshing || model.isCheckingRequirements)
                     .disabled(model.isRefreshing || model.isCheckingRequirements)
@@ -89,7 +90,7 @@ private struct Header: View {
     private var subtitle: String {
         if model.isRefreshing {
             let done = model.items.count - model.pendingCount
-            return model.pendingCount > 0 ? "Triaging \(done) of \(model.items.count)…" : "Checking GitHub…"
+            return model.pendingCount > 0 ? "Triaging \(done) of \(model.items.count)…" : "Checking notifications…"
         }
         guard let lastRefresh = model.lastRefresh else { return "Not checked yet" }
         let unread = model.items.count == 1 ? "1 unread" : "\(model.items.count) unread"

@@ -70,6 +70,24 @@ public protocol ContextProviding: Sendable {
     func context(for notification: GitHubNotification) async throws -> ThreadContext
 }
 
+public struct ForgeContextProvider: ContextProviding {
+    public struct Unavailable: Error, CustomStringConvertible {
+        let forge: Forge
+        public var description: String { "\(forge.rawValue) is unavailable" }
+    }
+
+    private let providers: [Forge: any ContextProviding]
+
+    public init(_ providers: [Forge: any ContextProviding]) {
+        self.providers = providers
+    }
+
+    public func context(for notification: GitHubNotification) async throws -> ThreadContext {
+        guard let provider = providers[notification.forge] else { throw Unavailable(forge: notification.forge) }
+        return try await provider.context(for: notification)
+    }
+}
+
 public actor GitHubContextProvider: ContextProviding {
     private let client: GitHubClient
     private let viewer: String
@@ -198,7 +216,7 @@ extension ThreadContext {
         )
     }
 
-    private static func recentActivity(_ events: [Event]) -> [UntrustedContent.Entry] {
+    static func recentActivity(_ events: [Event]) -> [UntrustedContent.Entry] {
         events.dropFirst().sorted { $0.at < $1.at }.suffix(recentActivityLimit).map {
             UntrustedContent.Entry(author: $0.author, kind: $0.kind, at: $0.at, path: $0.path, body: $0.body.truncated(to: entryLimit))
         }
@@ -227,7 +245,8 @@ extension Facts {
     }
 
     static func mentions(_ login: String, in text: String) -> Bool {
-        let pattern = "(?<![A-Za-z0-9-])@\(NSRegularExpression.escapedPattern(for: login))(?![A-Za-z0-9-])"
+        // A dot ends a sentence, unless a character follows it and the GitLab username goes on.
+        let pattern = "(?<![A-Za-z0-9-])@\(NSRegularExpression.escapedPattern(for: login))(?![A-Za-z0-9_-]|\\.[A-Za-z0-9_])"
         return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 }

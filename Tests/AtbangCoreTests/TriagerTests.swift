@@ -8,7 +8,7 @@ private actor CallCounter {
 }
 
 private struct StubContexts: ContextProviding {
-    let result: Result<ThreadContext, GitHubClient.Failure>
+    let result: Result<ThreadContext, any Error>
     let calls = CallCounter()
 
     func context(for notification: GitHubNotification) async throws -> ThreadContext {
@@ -94,11 +94,18 @@ struct TriagerTests {
 
     @Test func reportsGitHubFailuresWithoutCallingClaude() async {
         let classifier = StubClassifier(result: .success(triage))
-        let contexts = StubContexts(result: .failure(.http(502, "Bad gateway")))
+        let contexts = StubContexts(result: .failure(GitHubClient.Failure.http(502, "Bad gateway")))
         let result = await Triager(contexts: contexts, classifier: classifier).triage(notification, cached: nil)
 
         #expect(result == TriageResult(threadID: "1", failure: "GitHub: GitHub answered 502: Bad gateway"))
         #expect(await classifier.calls.inputs.isEmpty)
+    }
+
+    @Test func reportsGitLabFailuresUnderGitLab() async {
+        let contexts = StubContexts(result: .failure(GitLabClient.Failure.exit(1, "glab: 404 Not Found")))
+        let result = await Triager(contexts: contexts, classifier: StubClassifier(result: .success(triage))).triage(Fixtures.gitLabNotification(), cached: nil)
+
+        #expect(result == TriageResult(threadID: "gitlab:1", failure: "GitLab: glab exited with 1: glab: 404 Not Found"))
     }
 
     @Test func reportsClaudeFailuresAndKeepsTheLink() async {

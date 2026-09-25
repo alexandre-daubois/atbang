@@ -160,8 +160,19 @@ struct ThreadContextTests {
         ("@alicex please", false),
         ("mail me at bob@alice.com", false),
         ("no mention", false),
+        ("@alice.smith please", false),
+        ("@alice_smith please", false),
     ])
     func mentions(text: String, expected: Bool) {
         #expect(Facts.mentions("alice", in: text) == expected)
+    }
+
+    @Test(arguments: [
+        ("@alice.smith can you look?", true),
+        ("thanks @alice.smith.", true),
+        ("@alice please", false),
+    ])
+    func gitLabUsernameMentions(text: String, expected: Bool) {
+        #expect(Facts.mentions("alice.smith", in: text) == expected)
     }
 }

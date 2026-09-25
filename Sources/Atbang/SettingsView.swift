@@ -30,6 +30,20 @@ struct SettingsView: View {
             } footer: {
                 SettingsFooter("Notifications and threads are only read. The one write is Mark as Done, on the notification you pick.")
             }
+            Section {
+                LabeledContent("Host") {
+                    TextField("Host", text: $model.gitLabHost)
+                        .labelsHidden()
+                        .font(.system(size: 12, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                        .onSubmit { Task { await model.checkRequirements() } }
+                }
+                ExecutableField(path: $model.glabPath)
+            } header: {
+                Text("GitLab")
+            } footer: {
+                SettingsFooter("To-do items and threads are only read, through glab. The one write is Mark as Done, on the to-do item you pick.")
+            }
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
