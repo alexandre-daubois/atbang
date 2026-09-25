@@ -18,6 +18,41 @@ jobs:
       - name: Test
         run: swift test
 
+      # Releases are always notarized, so a missing secret stops the release instead of shipping an app Gatekeeper refuses.
+      - name: Import the Developer ID certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_P12"
+          test -n "$CERTIFICATE_PASSWORD"
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity=$(security find-identity -v -p codesigning "$keychain" | awk -F '"' '/Developer ID Application/ { print $2; exit }')
+          test -n "$identity"
+          echo "SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "NOTARY_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Store the notarization credentials
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          test -n "$NOTARY_KEY"
+          test -n "$NOTARY_KEY_ID"
+          test -n "$NOTARY_ISSUER_ID"
+          echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+          xcrun notarytool store-credentials atbang --key "$RUNNER_TEMP/notary.p8" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" --keychain "$NOTARY_KEYCHAIN"
+          echo "NOTARY_PROFILE=atbang" >> "$GITHUB_ENV"
+
       - name: Build
         run: |
           echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"

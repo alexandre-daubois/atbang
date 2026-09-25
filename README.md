@@ -37,7 +37,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude auth login
 ```
 
-Atbang lands in your Applications folder and runs in the menu bar. It checks both tools when it starts and tells you what's missing.
+Atbang lands in your Applications folder and runs in the menu bar. It checks both tools when it starts and tells you what's missing. You can also download `Atbang-<version>.zip` from the [releases](https://github.com/alexandre-daubois/atbang/releases) and move `Atbang.app` to your Applications folder yourself.
 
 ## Update and uninstall
 
@@ -50,9 +50,7 @@ brew uninstall --cask --zap alexandre-daubois/tap/atbang
 
 ## Privacy and security
 
-Atbang only reads from GitHub, with one exception: marking a thread as done when you ask for it. It uses the token of the GitHub CLI, keeps it in memory and only ever sends it to `api.github.com`. Claude runs through `claude -p` without any tool, MCP server or settings, the text of a thread is handed over as untrusted data that Claude summarizes but never obeys, and its answer is checked against a strict JSON schema before being displayed as plain text.
-
-The app isn't notarized yet, so the cask removes its quarantine flag.
+Atbang is signed with a Developer ID and notarized by Apple. It only reads from GitHub, with one exception: marking a thread as done when you ask for it. It uses the token of the GitHub CLI, keeps it in memory and only ever sends it to `api.github.com`. Claude runs through `claude -p` without any tool, MCP server or settings, the text of a thread is handed over as untrusted data that Claude summarizes but never obeys, and its answer is checked against a strict JSON schema before being displayed as plain text.
 
 ## Build from source
 

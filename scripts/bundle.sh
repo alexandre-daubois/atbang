@@ -2,6 +2,7 @@
 # Builds a universal build/Atbang.app and zips it as build/Atbang-$VERSION.zip.
 # VERSION defaults to 1.0.0. SIGN_IDENTITY signs with that Developer ID certificate instead of an ad-hoc
 # signature, and NOTARY_PROFILE, a profile saved with `xcrun notarytool store-credentials`, notarizes and staples.
+# NOTARY_KEYCHAIN points notarytool at the keychain holding that profile when it isn't the default one.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -53,7 +54,7 @@ zip=build/Atbang-$VERSION.zip
 rm -f "$zip"
 ditto -c -k --norsrc --noextattr --noacl --keepParent "$app" "$zip"
 if [ -n "${NOTARY_PROFILE:-}" ]; then
-    xcrun notarytool submit "$zip" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun notarytool submit "$zip" --keychain-profile "$NOTARY_PROFILE" ${NOTARY_KEYCHAIN:+--keychain "$NOTARY_KEYCHAIN"} --wait
     xcrun stapler staple "$app"
     rm -f "$zip"
     ditto -c -k --norsrc --noextattr --noacl --keepParent "$app" "$zip"

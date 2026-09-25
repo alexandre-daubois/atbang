@@ -17,15 +17,6 @@ cask "atbang" do
 
   app "Atbang.app"
 
-  # The app is signed ad hoc and not notarized, so Gatekeeper refuses to open it while it is quarantined.
-  postflight_steps do
-    run "/usr/bin/xattr",
-        args:           ["-dr", "com.apple.quarantine", "{{appdir}}/Atbang.app"],
-        must_succeed:   false,
-        writable_paths: ["Atbang.app"],
-        writable_base:  :appdir
-  end
-
   zap trash: [
     "~/Library/Caches/Atbang",
     "~/Library/Preferences/dev.daubois.Atbang.plist",
