@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test
+        run: swift test
+
+      - name: Build
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          VERSION="${GITHUB_REF_NAME#v}" ./scripts/bundle.sh
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "build/Atbang-$VERSION.zip" --title "Atbang $VERSION" --generate-notes --verify-tag
+
+      - name: Update the Homebrew cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/alexandre-daubois/homebrew-tap.git" tap
+          ./scripts/cask.sh "$VERSION" "$(shasum -a 256 "build/Atbang-$VERSION.zip" | cut -d ' ' -f 1)" > tap/Casks/atbang.rb
+          git -C tap add Casks/atbang.rb
+          git -C tap -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update atbang to $VERSION"
+          git -C tap push

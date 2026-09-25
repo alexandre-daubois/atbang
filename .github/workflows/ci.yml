@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
+
+      # Cask cops only run on a cask that lives in a tap.
+      - name: Check the Homebrew cask
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_ANALYTICS: "1"
+        run: |
+          brew tap-new --no-git atbang/check
+          tap="$(brew --repository)/Library/Taps/atbang/homebrew-check"
+          mkdir -p "$tap/Casks"
+          ./scripts/cask.sh 0.0.0 "$(printf '0%.0s' $(seq 64))" > "$tap/Casks/atbang.rb"
+          brew style atbang/check/atbang
