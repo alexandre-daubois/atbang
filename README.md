@@ -1,4 +1,4 @@
-# Atbang: Triage Your GitHub Notifications with Claude
+# Atbang: triage your GitHub notifications with Claude
 
 Atbang is a free and open-source macOS menu bar app that sorts your unread GitHub notifications by priority with Claude AI. It reads the recent conversation of every pull request and issue, and the report of every security advisory, works out who is waiting on whom, and gives each thread a priority and a one-line summary, so open-source maintainers can clear their GitHub inbox without opening every thread.
 
@@ -29,7 +29,7 @@ Atbang needs macOS 26 Tahoe or later. Homebrew adds the tap and installs the Git
 brew install --cask alexandre-daubois/tap/atbang
 ```
 
-If the tap was already there, for Ember for instance, run `brew update` first so Homebrew sees Atbang. Then sign in to GitHub and install Claude Code if you haven't yet:
+If you had already added the tap, run `brew update` first so Homebrew sees Atbang. Then sign in to GitHub and install Claude Code if you haven't yet:
 
 ```sh
 gh auth login
@@ -51,15 +51,6 @@ brew uninstall --cask --zap alexandre-daubois/tap/atbang
 ## Privacy and security
 
 Atbang is signed with a Developer ID and notarized by Apple. It only reads from GitHub, with one exception: marking a thread as done when you ask for it. It uses the token of the GitHub CLI, keeps it in memory and only ever sends it to `api.github.com`. Claude runs through `claude -p` without any tool, MCP server or settings, the text of a thread is handed over as untrusted data that Claude summarizes but never obeys, and its answer is checked against a strict JSON schema before being displayed as plain text.
-
-## Build from source
-
-```sh
-swift test
-./scripts/bundle.sh
-```
-
-The script builds a universal `build/Atbang.app` and zips it for release.
 
 ## License
 
